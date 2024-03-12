@@ -1,0 +1,13 @@
+{
+	"name": "gcp python in remote container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/src",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance"]
+    }
+  }
+}

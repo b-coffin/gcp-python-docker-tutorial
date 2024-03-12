@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+    ports:
+      - 3003:3000
+    tty:
+      true # コンテナを起動させたままにする
+    volumes:
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json
+      - ./src:/src

@@ -1,0 +1,17 @@
+{
+  "project": "project01",
+  "service": "bigquery",
+  "mode": "compare",
+  "bigquery": {
+    "tables": [
+      {
+        "dataset": "dataset01",
+        "table": "table01"
+      },
+      {
+        "dataset": "dataset02",
+        "table": "table02"
+      }
+    ]
+  }
+}
