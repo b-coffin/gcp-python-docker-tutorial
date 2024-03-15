@@ -103,6 +103,7 @@ def main():
         elif config.mode == "select":
             for tbl in config.tables:
                 full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
+                result_filename = f"{tbl['dataset']}-{tbl['table']}-{config.mode}"
 
                 if config.output_format == "sql":
                     column_names = bq.get_columnslist(full_tableid)
@@ -112,7 +113,7 @@ def main():
                         continue
 
                     os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, "select.sql"), "w") as f:
+                    with open(os.path.join(result_dir, f"{result_filename}.sql"), "w") as f:
                         f.write(
 f"""
 SELECT
@@ -129,7 +130,7 @@ FROM `{full_tableid}`
                         continue
 
                     os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, "select.csv"), "w") as f:
+                    with open(os.path.join(result_dir, f"{result_filename}.csv"), "w") as f:
                         writer = csv.writer(f)
                         writer.writerow(column_names)
 
@@ -141,7 +142,7 @@ FROM `{full_tableid}`
                         continue
 
                     os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, "select.jsonl"), "w") as f:
+                    with open(os.path.join(result_dir, f"{result_filename}.jsonl"), "w") as f:
                         f.writelines(json.dumps(columns_jsonl))
 
     return
