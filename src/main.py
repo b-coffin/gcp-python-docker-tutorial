@@ -134,6 +134,9 @@ FROM `{full_tableid}`
                         writer = csv.writer(f)
                         writer.writerow(column_names)
 
+                    with open(os.path.join(result_dir, f"{result_filename}-upload.sh"), "w") as f:
+                        f.write(f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv")
+
                 elif config.output_format == "jsonl":
                     columns_jsonl = bq.get_columnsjsonl(full_tableid)
 
