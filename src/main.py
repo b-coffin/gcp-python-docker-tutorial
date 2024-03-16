@@ -134,6 +134,7 @@ FROM `{full_tableid}`
                         writer = csv.writer(f)
                         writer.writerow(column_names)
 
+                    # コマンドのサンプルを出力
                     with open(os.path.join(result_dir, f"{result_filename}-upload.sh"), "w") as f:
                         f.write(f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv")
 
@@ -147,6 +148,10 @@ FROM `{full_tableid}`
                     os.mkdir(result_dir)
                     with open(os.path.join(result_dir, f"{result_filename}.jsonl"), "w") as f:
                         f.writelines(json.dumps(columns_jsonl))
+
+                    # コマンドのサンプルを出力
+                    with open(os.path.join(result_dir, f"{result_filename}-upload.sh"), "w") as f:
+                        f.write(f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} path/to/jsonl")
 
     return
 
