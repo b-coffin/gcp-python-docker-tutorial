@@ -10,16 +10,20 @@ class Bigquery:
         return self.client.get_table(full_tableid).schema
 
 
-    def get_columnslist(self, full_tableid):
-        columnslist = []
-        for schemafield in self.get_schemafields(full_tableid):
-            if schemafield.field_type == "RECORD":
-                for f in schemafield.fields:
-                    columnslist.append(f"{schemafield.name}.{f.name}")
-            else:
-                columnslist.append(schemafield.name)
+    # STRUCT構造になっている場合は `親カラム名.子カラム名` の形式でカラム名を返す
+    def get_columnslist(self, full_tableid: str) -> list[str]: # type: ignore 
 
-        return columnslist
+        # 再帰関数
+        def yield_columnname(schemafields: list[bigquery.SchemaField], prefix: str|None=None) -> str: # type: ignore
+            for schemafield in schemafields:
+                fieldname_withprefix: str = f"{prefix + '.' if prefix else ''}{schemafield.name}"
+                if schemafield.field_type == "RECORD":
+                    for i in yield_columnname(schemafield.fields, fieldname_withprefix):
+                        yield i                
+                else:
+                    yield fieldname_withprefix
+        
+        return list(yield_columnname(self.get_schemafields(full_tableid)))
 
 
     def get_columnsjsonl(self, full_tableid):
