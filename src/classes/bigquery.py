@@ -26,28 +26,33 @@ class Bigquery:
         return list(yield_columnname(self.get_schemafields(full_tableid)))
 
 
-    def get_columnsjsonl(self, full_tableid):
-        columnsjsonl = {}
-        for schemafield in self.get_schemafields(full_tableid):
-            if schemafield.mode == "REPEATED":
-                columnsjsonl[schemafield.name] = [self.get_defaultvalue(schemafield)]
+    # 再帰関数
+    def get_columnsjson(self, schemafields: list[bigquery.SchemaField], data: dict[str, str]|None, prefix: str|None = None) -> dict[str, str|list|dict]: # type: ignore
+        result_columnsjson: dict = {}
+        for schemafield in schemafields:
+            fieldname_withprefix: str = f"{prefix + '.' if prefix else ''}{schemafield.name}"
+            if schemafield.field_type == "RECORD":
+                value = self.get_columnsjson(schemafield.fields, data, fieldname_withprefix)
+                if schemafield.mode == "REPEATED":
+                    result_columnsjson[schemafield.name] = [value]
+                else:
+                    result_columnsjson[schemafield.name] = value
             else:
-                columnsjsonl[schemafield.name] = self.get_defaultvalue(schemafield)
+                value = data[fieldname_withprefix] if data else self.get_defaultvalue(schemafield.field_type)
+                if schemafield.mode == "REPEATED":
+                    result_columnsjson[schemafield.name] = [value]
+                else:
+                    result_columnsjson[schemafield.name] = value
 
-        return columnsjsonl
+        return result_columnsjson
 
 
-    def get_defaultvalue(self, schemafield):
-        if schemafield.field_type in ["NUMERIC", "INTEGER"]:
+    def get_defaultvalue(self, field_type: str):
+        if field_type in ["NUMERIC", "INTEGER"]:
             return 0
-        elif schemafield.field_type in ["DATE"]:
+        elif field_type in ["DATE"]:
             return "9999-12-31"
-        elif schemafield.field_type in ["BOOLEAN"]:
+        elif field_type in ["BOOLEAN"]:
             return "TRUE"
-        elif schemafield.field_type in ["RECORD"]:
-            temp_json = {}
-            for f in schemafield.fields:
-                temp_json[f.name] = self.get_defaultvalue(f)
-            return temp_json
         else:
             return ""

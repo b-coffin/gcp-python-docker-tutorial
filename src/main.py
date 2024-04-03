@@ -4,6 +4,8 @@ import jinja2
 import json
 import os
 import pandas as pd
+import pathlib
+import re
 import traceback
 from zoneinfo import ZoneInfo
 
@@ -139,19 +141,34 @@ FROM `{full_tableid}`
                         f.write(f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv")
 
                 elif config.output_format == "jsonl":
-                    columns_jsonl = bq.get_columnsjsonl(full_tableid)
+                    result_jsons: list[dict] = []
 
-                    # 空だったらスキップ
-                    if columns_jsonl == {}:
-                        continue
+                    # inputがあれば、その情報をもとにjsonlを作成
+                    # inputがなければテンプレートを作成
+                    input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv")  if re.search(rf"^.*{tbl['table']}.*$", str(p))]
+                    if len(input_files) == 0:
+                        result_jsons.append({
+                            "path": f"{result_dir}/{result_filename}.jsonl",
+                            "json": [bq.get_columnsjson(bq.get_schemafields(full_tableid), data=None)]
+                        })
+                    else:
+                        for input_file in input_files:
+                            temp_jsons: list[dict] = []
+                            with open(input_file, mode="r", encoding="shift_jis") as f:
+                                for row in list(csv.DictReader(f)):
+                                    temp_jsons.append(bq.get_columnsjson(bq.get_schemafields(full_tableid), data=row))
 
-                    os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, f"{result_filename}.jsonl"), "w") as f:
-                        f.writelines(json.dumps(columns_jsonl))
+                            result_jsons.append({
+                                "path": f"{result_dir}/{get_filename_withoutextension(input_file)}.jsonl",
+                                "json": temp_jsons
+                            })
 
-                    # コマンドのサンプルを出力
-                    with open(os.path.join(result_dir, f"{result_filename}-upload.sh"), "w") as f:
-                        f.write(f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} path/to/jsonl")
+                    upload_command: str = ""
+                    for result_json in result_jsons:
+                        write_jsonl_file(result_json["path"], result_json["json"])
+                        upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} src/{get_escapedtext_forcommand(result_json["path"])}"
+
+                    write_text_file(f"{result_dir}/{result_filename}-upload.sh", upload_command)
 
     return
 
