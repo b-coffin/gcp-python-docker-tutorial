@@ -14,7 +14,7 @@ class Bigquery:
     def get_columnslist(self, full_tableid: str) -> list[str]: # type: ignore 
 
         # 再帰関数
-        def yield_columnname(schemafields: list[bigquery.SchemaField], prefix: str|None=None) -> str: # type: ignore
+        def yield_columnname(schemafields: list[bigquery.SchemaField], prefix: str|None = None) -> str: # type: ignore
             for schemafield in schemafields:
                 fieldname_withprefix: str = f"{prefix + '.' if prefix else ''}{schemafield.name}"
                 if schemafield.field_type == "RECORD":
