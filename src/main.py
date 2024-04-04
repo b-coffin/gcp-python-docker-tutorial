@@ -79,12 +79,12 @@ def main():
                 alias1 = f"compare1.{row.alias}"
                 alias2 = f"compare2.{row.alias}"
                 if row.indicator == "both":
-                    join_conditions.append(f"{conjunction} {get_ifnull_sql(alias1, row.type)} = {get_ifnull_sql(alias2, row.type)}")
+                    join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row.type)} = {Bigquery.get_ifnull_sql(alias2, row.type)}")
                     where_condition = f"{alias1} IS NULL OR {alias2} IS NULL"
                 elif row.indicator == "left_only":
-                    join_conditions.append(f"{conjunction} no_target = {get_ifnull_sql(alias2, row.type)}")
+                    join_conditions.append(f"{conjunction} no_target = {Bigquery.get_ifnull_sql(alias2, row.type)}")
                 elif row.indicator == "right_only":
-                    join_conditions.append(f"{conjunction} {get_ifnull_sql(alias1, row.type)} = no_target")
+                    join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row.type)} = no_target")
 
             # jinja2のテンプレートを読み込む
             # 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
