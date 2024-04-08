@@ -5,7 +5,6 @@ import json
 import os
 import pandas as pd
 import pathlib
-import re
 import traceback
 from zoneinfo import ZoneInfo
 
@@ -145,7 +144,7 @@ FROM `{full_tableid}`
 
                     # inputがあれば、その情報をもとにjsonlを作成
                     # inputがなければテンプレートを作成
-                    input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv")  if re.search(rf"^.*{tbl['table']}.*$", str(p))]
+                    input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv") if is_contain_allwords(str(p), [tbl['dataset'], tbl['table']])]
                     if len(input_files) == 0:
                         result_jsons.append({
                             "path": f"{result_dir}/{result_filename}.jsonl",
