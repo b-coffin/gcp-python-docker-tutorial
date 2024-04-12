@@ -3,6 +3,21 @@ import os
 import polars
 import re
 
+COLOR_BLUE = "blue"
+COLOR_YELLOW = "yellow"
+COLOR_GREEN = "green"
+
+def print_with_color(text: str, color: str) -> None:
+    if color == COLOR_BLUE:
+        print(f"\033[34m{text}\033[0m")
+    elif color == COLOR_GREEN:
+        print(f"\033[32m{text}\033[0m")
+    elif color == COLOR_YELLOW:
+        print(f"\033[33m{text}\033[0m")
+    else:
+        print(text)
+
+
 # Terminal上で必要になるエスケープ処理を入れる
 def get_escapedtext_forcommand(text: str) -> str:
     return text.replace(" ", "\\ ").replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)").replace("&", "\\&")

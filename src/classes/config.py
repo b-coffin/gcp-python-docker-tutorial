@@ -14,7 +14,7 @@ class Config:
         self.project = jmespath.search("project", config_json)
         self.service = jmespath.search("service", config_json)
         self.mode = jmespath.search("mode", config_json)
-        self.output_format = jmespath.search("output_format", config_json) or "sql"
+        # self.output_format = jmespath.search("output_format", config_json) or "sql"
         if self.service == self.SERVICES["BIGQUERY"]:
             self.tables = jmespath.search("bigquery.tables", config_json)
 

@@ -68,7 +68,7 @@ def main():
                 })
 
             if len(compare_tables[0]["columns"]) != len(compare_tables[1]["columns"]):
-                print("\033[33mWARNING: Number of schemas in compare tables does not match\033[0m")
+                print_with_color("WARNING: Number of schemas in compare tables does not match", COLOR_YELLOW)
             
             left = polars.DataFrame(compare_tables[0]["columns"])
             right = polars.DataFrame(compare_tables[1]["columns"])
@@ -79,7 +79,7 @@ def main():
             write_df_to_csv(os.path.join(result_dir, f"{result_basefilename}.csv"), outer_merged_df)
 
             # 値を比較するsql作成
-            
+
             inner_merged_df = left.join(right, on=["name", "alias", "type"], how="inner")
 
             join_conditions = []
@@ -114,70 +114,66 @@ def main():
         elif config.mode == "select":
             for tbl in config.tables:
                 full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
-                result_filename = f"{tbl['dataset']}-{tbl['table']}-{config.mode}"
+                print_with_color(f"\n### {full_tableid}", COLOR_BLUE)
 
-                if config.output_format == "sql":
-                    column_names = bq.get_columnslist(full_tableid)
+                result_dir_bytable = f"{tbl['dataset']}.{tbl['table']}"
 
-                    # カラムがなかったらスキップ
-                    if len(column_names) == 0:
-                        continue
+                column_names = bq.get_columnslist(full_tableid)
 
-                    os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, f"{result_filename}.sql"), "w") as f:
-                        f.write(
+                # カラムがなかったらスキップ
+                if len(column_names) == 0:
+                    continue
+
+                # sql出力
+                write_text_file(os.path.join(result_dir, result_dir_bytable, "select.sql"), 
 f"""
 SELECT
     {',\n\t'.join(column_names)}
 FROM `{full_tableid}`
 """
-                        )
+                )
 
-                elif config.output_format == "csv":
-                    column_names = bq.get_columnslist(full_tableid)
+                # csv出力
+                with open(os.path.join(result_dir, result_dir_bytable, "columns.csv"), "w") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(column_names)
 
-                    # カラムがなかったらスキップ
-                    if len(column_names) == 0:
-                        continue
+                # uploadコマンドのサンプル
+                upload_command: str = f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv\n"
 
-                    os.mkdir(result_dir)
-                    with open(os.path.join(result_dir, f"{result_filename}.csv"), "w") as f:
-                        writer = csv.writer(f)
-                        writer.writerow(column_names)
+                # jsonl出力
 
-                    # コマンドのサンプルを出力
-                    with open(os.path.join(result_dir, f"{result_filename}-upload.sh"), "w") as f:
-                        f.write(f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv")
+                result_jsons: list[dict] = []
 
-                elif config.output_format == "jsonl":
-                    result_jsons: list[dict] = []
+                # inputがあれば、その情報をもとにjsonlを作成
+                # inputがなければテンプレートを作成
+                input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv") if is_contain_allwords(str(p), [tbl['dataset'], rf"{tbl['table']}\."])]
+                if len(input_files) == 0:
+                    result_jsons.append({
+                        "path": os.path.join(result_dir, result_dir_bytable, "template.jsonl"),
+                        "json": [bq.get_columnsjson(bq.get_schemafields(full_tableid), data=None)]
+                    })
+                else:
+                    for input_file in input_files:
+                        print(input_file)
 
-                    # inputがあれば、その情報をもとにjsonlを作成
-                    # inputがなければテンプレートを作成
-                    input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv") if is_contain_allwords(str(p), [tbl['dataset'], tbl['table']])]
-                    if len(input_files) == 0:
+                        temp_jsons: list[dict] = []
+                        with open(input_file, mode="r", encoding="shift_jis") as f:
+                            for row in list(csv.DictReader(f)):
+                                temp_jsons.append(bq.get_columnsjson(bq.get_schemafields(full_tableid), data=row))
+
                         result_jsons.append({
-                            "path": f"{result_dir}/{result_filename}.jsonl",
-                            "json": [bq.get_columnsjson(bq.get_schemafields(full_tableid), data=None)]
+                            "path": os.path.join(result_dir, result_dir_bytable, f"{get_filename_withoutextension(input_file)}.jsonl"),
+                            "json": temp_jsons
                         })
-                    else:
-                        for input_file in input_files:
-                            temp_jsons: list[dict] = []
-                            with open(input_file, mode="r", encoding="shift_jis") as f:
-                                for row in list(csv.DictReader(f)):
-                                    temp_jsons.append(bq.get_columnsjson(bq.get_schemafields(full_tableid), data=row))
 
-                            result_jsons.append({
-                                "path": f"{result_dir}/{get_filename_withoutextension(input_file)}.jsonl",
-                                "json": temp_jsons
-                            })
+                for result_json in result_jsons:
+                    write_jsonl_file(result_json["path"], result_json["json"])
+                    upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", get_escapedtext_forcommand(result_json["path"]))}\n"
 
-                    upload_command: str = ""
-                    for result_json in result_jsons:
-                        write_jsonl_file(result_json["path"], result_json["json"])
-                        upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} src/{get_escapedtext_forcommand(result_json["path"])}"
+                write_text_file(os.path.join(result_dir, result_dir_bytable, "upload.sh"), upload_command)
 
-                    write_text_file(f"{result_dir}/{result_filename}-upload.sh", upload_command)
+                print_with_color("...Done", COLOR_GREEN)
 
     return
 
