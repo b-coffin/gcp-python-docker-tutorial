@@ -20,12 +20,16 @@ def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
             continue
 
         # sql出力
-        write_text_file(os.path.join(result_dir_bytable, "select.sql"), 
-f"""
-SELECT
-    {',\n\t'.join(column_names)}
-FROM `{full_tableid}`
-"""
+        schemafields = bq.get_schemafields(full_tableid)
+        render_content = {
+            "full_tableid": full_tableid,
+            "unnestcolumns": get_unnestcolumns(schemafields),
+            "unnestjoins": get_unnestjoins(schemafields),
+        }
+        write_used_jinja2template(
+            os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
+            os.path.join(result_dir_bytable, "select_unnest.sql"),
+            render_content
         )
 
         # csv出力
@@ -71,3 +75,28 @@ FROM `{full_tableid}`
         print_with_color("...Done", COLOR_GREEN)
 
     return
+
+
+# 再帰関数
+def get_unnestcolumns(schemafields: list, prefix: str = "main") -> list[str]: # type: ignore
+    columns = []
+    for schemafield in schemafields:
+        if schemafield.field_type == "RECORD":
+            columns.extend(get_unnestcolumns(schemafield.fields, f"{prefix}__{schemafield.name}"))
+        else:
+            columns.append(f"{prefix}.{schemafield.name}")
+    return columns
+
+
+# 再帰関数
+def get_unnestjoins(schemafields: list, prefix: str = "main") -> list[str]: # type: ignore
+    joins = []
+    for schemafield in schemafields:
+        if schemafield.field_type == "RECORD":
+            alias = f"{prefix}__{schemafield.name}"
+            joins.append({
+                "column_name": f"{prefix}.{schemafield.name}",
+                "alias": alias
+            })
+            joins.extend(get_unnestjoins(schemafield.fields, alias))
+    return joins

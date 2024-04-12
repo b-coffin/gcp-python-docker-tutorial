@@ -1,3 +1,4 @@
+import jinja2
 import json
 import os
 import polars
@@ -54,3 +55,13 @@ def write_text_file(path: str, text: str) -> None:
 def write_df_to_csv(path: str, df: polars.DataFrame) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.write_csv(path, separator=",")
+
+
+# jinja2のテンプレートを読み込む
+# 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
+def write_used_jinja2template(template_path: str, write_target_path: str, render_content) -> None:
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=os.path.dirname(template_path), encoding="utf8"))
+    template = env.get_template(os.path.basename(template_path))
+    os.makedirs(os.path.dirname(write_target_path), exist_ok=True)
+    with open(write_target_path, "w") as f:
+        f.write(template.render(render_content))
