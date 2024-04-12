@@ -61,6 +61,7 @@ def main():
 
                 compare_tables.append({
                     "full_tableid": full_tableid,
+                    "table": tbl['table'],
                     "columns": columns,
                     "except_columns": except_columns,
                     "uunest_select_queries": uunest_select_queries
@@ -71,11 +72,19 @@ def main():
             
             left = polars.DataFrame(compare_tables[0]["columns"])
             right = polars.DataFrame(compare_tables[1]["columns"])
-            merged_df = left.join(right, on=["name", "alias", "type"], how="inner")
+
+            # 比較表作成
+            outer_merged_df = left.join(right, on=["name", "alias", "type"], how="outer")
+            result_basefilename = os.path.join(result_dir, f"compare-{'__and__'.join([tbl['table'] for tbl in compare_tables])}")
+            write_df_to_csv(os.path.join(result_dir, f"{result_basefilename}.csv"), outer_merged_df)
+
+            # 値を比較するsql作成
+            
+            inner_merged_df = left.join(right, on=["name", "alias", "type"], how="inner")
 
             join_conditions = []
             where_condition = ""
-            for i, row in enumerate(merged_df.rows(named=True)):
+            for i, row in enumerate(inner_merged_df.rows(named=True)):
                 alias1 = f"compare1.{row['alias']}"
                 alias2 = f"compare2.{row['alias']}"
 
@@ -93,8 +102,7 @@ def main():
             template = env.get_template("compare.sql")
 
             # 結果を出力
-            os.mkdir(result_dir)
-            with open(os.path.join(result_dir, "compare.sql"), "w") as f:
+            with open(os.path.join(result_dir, f"{result_basefilename}.sql"), "w") as f:
                 f.write(template.render({
                     "except_columns": [v["except_columns"] for v in compare_tables],
                     "uunest_select_queries": [v["uunest_select_queries"] for v in compare_tables],

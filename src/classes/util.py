@@ -1,5 +1,6 @@
 import json
 import os
+import polars
 import re
 
 # Terminal上で必要になるエスケープ処理を入れる
@@ -33,3 +34,8 @@ def write_text_file(path: str, text: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(text)
+
+
+def write_df_to_csv(path: str, df: polars.DataFrame) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    df.write_csv(path, separator=",")
