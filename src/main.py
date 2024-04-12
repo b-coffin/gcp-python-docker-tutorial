@@ -116,7 +116,7 @@ def main():
                 full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
                 print_with_color(f"\n### {full_tableid}", COLOR_BLUE)
 
-                result_dir_bytable = f"{tbl['dataset']}.{tbl['table']}"
+                result_dir_bytable = os.path.join(result_dir, f"{tbl['dataset']}.{tbl['table']}")
 
                 column_names = bq.get_columnslist(full_tableid)
 
@@ -125,7 +125,7 @@ def main():
                     continue
 
                 # sql出力
-                write_text_file(os.path.join(result_dir, result_dir_bytable, "select.sql"), 
+                write_text_file(os.path.join(result_dir_bytable, "select.sql"), 
 f"""
 SELECT
     {',\n\t'.join(column_names)}
@@ -134,7 +134,7 @@ FROM `{full_tableid}`
                 )
 
                 # csv出力
-                with open(os.path.join(result_dir, result_dir_bytable, "columns.csv"), "w") as f:
+                with open(os.path.join(result_dir_bytable, "columns.csv"), "w") as f:
                     writer = csv.writer(f)
                     writer.writerow(column_names)
 
@@ -150,7 +150,7 @@ FROM `{full_tableid}`
                 input_files: list[str] = [p for p in pathlib.Path().glob("input/**/*.csv") if is_contain_allwords(str(p), [tbl['dataset'], rf"{tbl['table']}\."])]
                 if len(input_files) == 0:
                     result_jsons.append({
-                        "path": os.path.join(result_dir, result_dir_bytable, "template.jsonl"),
+                        "path": os.path.join(result_dir_bytable, "template.jsonl"),
                         "json": [bq.get_columnsjson(bq.get_schemafields(full_tableid), data=None)]
                     })
                 else:
@@ -163,7 +163,7 @@ FROM `{full_tableid}`
                                 temp_jsons.append(bq.get_columnsjson(bq.get_schemafields(full_tableid), data=row))
 
                         result_jsons.append({
-                            "path": os.path.join(result_dir, result_dir_bytable, f"{get_filename_withoutextension(input_file)}.jsonl"),
+                            "path": os.path.join(result_dir_bytable, f"{get_filename_withoutextension(input_file)}.jsonl"),
                             "json": temp_jsons
                         })
 
@@ -171,7 +171,7 @@ FROM `{full_tableid}`
                     write_jsonl_file(result_json["path"], result_json["json"])
                     upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", get_escapedtext_forcommand(result_json["path"]))}\n"
 
-                write_text_file(os.path.join(result_dir, result_dir_bytable, "upload.sh"), upload_command)
+                write_text_file(os.path.join(result_dir_bytable, "upload.sh"), upload_command)
 
                 print_with_color("...Done", COLOR_GREEN)
 
