@@ -3,8 +3,8 @@ import datetime
 import jinja2
 import json
 import os
-import pandas as pd
 import pathlib
+import polars
 import traceback
 from zoneinfo import ZoneInfo
 
@@ -68,22 +68,24 @@ def main():
 
             if len(compare_tables[0]["columns"]) != len(compare_tables[1]["columns"]):
                 print("\033[33mWARNING: Number of schemas in compare tables does not match\033[0m")
-
-            merged_df = pd.merge(pd.DataFrame(compare_tables[0]["columns"]), pd.DataFrame(compare_tables[1]["columns"]), on=["name", "alias", "type"], how="outer", indicator="indicator")
+            
+            left = polars.DataFrame(compare_tables[0]["columns"])
+            right = polars.DataFrame(compare_tables[1]["columns"])
+            merged_df = left.join(right, on=["name", "alias", "type"], how="inner")
 
             join_conditions = []
             where_condition = ""
-            for i, row in enumerate(merged_df.itertuples()):
-                conjunction = "ON" if i == 0 else "AND"
-                alias1 = f"compare1.{row.alias}"
-                alias2 = f"compare2.{row.alias}"
-                if row.indicator == "both":
-                    join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row.type)} = {Bigquery.get_ifnull_sql(alias2, row.type)}")
+            for i, row in enumerate(merged_df.rows(named=True)):
+                alias1 = f"compare1.{row['alias']}"
+                alias2 = f"compare2.{row['alias']}"
+
+                if i == 0:
+                    conjunction = "ON"
                     where_condition = f"{alias1} IS NULL OR {alias2} IS NULL"
-                elif row.indicator == "left_only":
-                    join_conditions.append(f"{conjunction} no_target = {Bigquery.get_ifnull_sql(alias2, row.type)}")
-                elif row.indicator == "right_only":
-                    join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row.type)} = no_target")
+                else:
+                    conjunction = "AND"
+
+                join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row['type'])} = {Bigquery.get_ifnull_sql(alias2, row['type'])}")
 
             # jinja2のテンプレートを読み込む
             # 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
@@ -92,7 +94,7 @@ def main():
 
             # 結果を出力
             os.mkdir(result_dir)
-            with open(os.path.join(result_dir, "join.sql"), "w") as f:
+            with open(os.path.join(result_dir, "compare.sql"), "w") as f:
                 f.write(template.render({
                     "except_columns": [v["except_columns"] for v in compare_tables],
                     "uunest_select_queries": [v["uunest_select_queries"] for v in compare_tables],

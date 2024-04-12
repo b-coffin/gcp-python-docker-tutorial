@@ -5,4 +5,4 @@ WORKDIR /src
 EXPOSE 3000
 
 RUN pip install --upgrade google-cloud-bigquery\
-    && pip install Jinja2 jmespath pandas pyarrow
+    && pip install Jinja2 jmespath polars pyarrow
