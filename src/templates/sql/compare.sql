@@ -11,7 +11,7 @@ compare{{- i + 1 }} AS (
     FROM {{ "`{}`".format(compare_tables[i]['full_tableid']) }} AS main
     {%- if except_columns[i] %}
     {%- for column in except_columns[i] %}
-    LEFT OUTER JOIN UNNEST({{ column }}) AS {{ column -}}
+    LEFT OUTER JOIN UNNEST(main.{{ column }}) AS {{ column -}}
     {%- endfor %}
     {%- endif %}
 ){% if i == 0 %},{% endif %}
