@@ -54,8 +54,8 @@ def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
 
     # 比較表作成
     outer_merged_df = left.join(right, on=["name", "alias", "type"], how="outer")
-    result_basefilename = f"compare-{'__and__'.join([tbl['table'] for tbl in compare_tables])}"
-    write_df_to_csv(os.path.join(result_dir, f"{result_basefilename}.csv"), outer_merged_df)
+    result_basefilename = f"{'__and__'.join([tbl['table'] for tbl in compare_tables])}"
+    write_df_to_csv(os.path.join(result_dir, f"compare-{result_basefilename}.csv"), outer_merged_df)
 
     # 値を比較するsql作成
 
@@ -81,11 +81,19 @@ def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
 
     write_used_jinja2template(
         template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "compare.sql"),
-        write_target_path=os.path.join(result_dir, f"{result_basefilename}.sql"),
+        write_target_path=os.path.join(result_dir, f"compare-{result_basefilename}.sql"),
         render_content={
             "sub_queries": [tbl["unnest_query"] for tbl in compare_tables],
             "join_conditions": join_conditions,
             "where_condition": where_condition,
+        }
+    )
+
+    write_used_jinja2template(
+        template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "compare2.sql"),
+        write_target_path=os.path.join(result_dir, f"compare2-{result_basefilename}.sql"),
+        render_content={
+            "sub_queries": [tbl["unnest_query"] for tbl in compare_tables],
         }
     )
 
