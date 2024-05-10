@@ -1,9 +1,9 @@
 SELECT
-    {%- for column in unnestcolumns %}
-    {{ column }},
+    {%- for col in columns %}
+    {{ col["name"] }} AS {{ col["alias"] }},
     {%- endfor %}
 FROM {{ "`{}`".format(full_tableid) }} AS main
-{%- for j in unnestjoins %}
-LEFT OUTER JOIN UNNEST({{ j["column_name"] }}) AS {{ j["alias"] }}
+{%- for j in joins %}
+LEFT OUTER JOIN UNNEST({{ j["name"] }}) AS {{ j["alias"] }}
 {%- endfor %}
 ;

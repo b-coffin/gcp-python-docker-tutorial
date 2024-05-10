@@ -19,26 +19,47 @@ def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
         if len(column_names) == 0:
             continue
 
-        # sql出力
         schemafields = bq.get_schemafields(full_tableid)
-        render_content = {
-            "full_tableid": full_tableid,
-            "unnestcolumns": get_unnestcolumns(schemafields),
-            "unnestjoins": get_unnestjoins(schemafields),
-        }
+
+        # カラム情報出力
+
+        write_df_to_csv(
+            path=os.path.join(result_dir_bytable, "columns.csv"),
+            df=polars.DataFrame([{"column": sf.name} for sf in schemafields])
+        )
+
+        # sql出力
+
+        unnestcolumns = get_unnestcolumns(schemafields)
+
         write_used_jinja2template(
-            os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
-            os.path.join(result_dir_bytable, "select_unnest.sql"),
-            render_content
+            template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
+            write_target_path=os.path.join(result_dir_bytable, "select_unnest.sql"),
+            render_content={
+                "full_tableid": full_tableid,
+                "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
+                "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+            }
+        )
+
+        write_used_jinja2template(
+            template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
+            write_target_path=os.path.join(result_dir_bytable, "select_unnest_safecast_numeric.sql"),
+            render_content={
+                "full_tableid": full_tableid,
+                "columns": [{"name": f"SAFE_CAST({"__".join(col["parents"])}.{col["name"]} AS NUMERIC)", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
+                "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+            }
         )
 
         # csv出力
-        with open(os.path.join(result_dir_bytable, "columns.csv"), "w") as f:
+        path: str = os.path.join(result_dir_bytable, "template.csv")
+        with open(path, "w") as f:
             writer = csv.writer(f)
             writer.writerow(column_names)
 
         # uploadコマンドのサンプル
-        upload_command: str = f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} path/to/csv\n"
+        upload_command: str = f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", path)}\n"
 
         # jsonl出力
 
@@ -78,25 +99,14 @@ def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
 
 
 # 再帰関数
-def get_unnestcolumns(schemafields: list, prefix: str = "main") -> list[str]: # type: ignore
-    columns = []
+def get_unnestcolumns(schemafields: list, parents: list[str] = ["main"]) -> list[dict]: # type: ignore
+    cols = []
     for schemafield in schemafields:
+        cols.append({
+            "parents": parents,
+            "name": schemafield.name,
+            "type": schemafield.field_type
+        })
         if schemafield.field_type == "RECORD":
-            columns.extend(get_unnestcolumns(schemafield.fields, f"{prefix}__{schemafield.name}"))
-        else:
-            columns.append(f"{prefix}.{schemafield.name}")
-    return columns
-
-
-# 再帰関数
-def get_unnestjoins(schemafields: list, prefix: str = "main") -> list[str]: # type: ignore
-    joins = []
-    for schemafield in schemafields:
-        if schemafield.field_type == "RECORD":
-            alias = f"{prefix}__{schemafield.name}"
-            joins.append({
-                "column_name": f"{prefix}.{schemafield.name}",
-                "alias": alias
-            })
-            joins.extend(get_unnestjoins(schemafield.fields, alias))
-    return joins
+            cols.extend(get_unnestcolumns(schemafield.fields, parents + [schemafield.name]))
+    return cols

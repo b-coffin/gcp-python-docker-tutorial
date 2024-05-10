@@ -26,7 +26,7 @@ def main():
         print(f"Stacktrace: {traceback.format_exc()}")
 
     # 結果を格納するフォルダ
-    result_dir = os.path.join("result", datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d%H%M%S") + "_" + config.service)
+    result_dir = os.path.join("result", datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + "_" + config.service)
 
     if config.service == Config.SERVICES["BIGQUERY"]:
         bq = Bigquery(config.project)
@@ -75,7 +75,7 @@ def main():
 
             # 比較表作成
             outer_merged_df = left.join(right, on=["name", "alias", "type"], how="outer")
-            result_basefilename = os.path.join(result_dir, f"compare-{'__and__'.join([tbl['table'] for tbl in compare_tables])}")
+            result_basefilename = f"compare-{'__and__'.join([tbl['table'] for tbl in compare_tables])}"
             write_df_to_csv(os.path.join(result_dir, f"{result_basefilename}.csv"), outer_merged_df)
 
             # 値を比較するsql作成
