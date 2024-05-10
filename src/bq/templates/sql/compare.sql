@@ -1,9 +1,11 @@
-WITH
-{%- for i in [0, 1] %}
-compare{{- i + 1 }} AS (
-    {{ sub_queries[i] }}
-){% if i == 0 %},{% endif %}
-{%- endfor %}
+WITH compare1 AS (
+{{ sub_queries[0] }}
+),
+
+compare2 AS (
+{{ sub_queries[1] }}
+)
+
 SELECT *
 FROM compare1
 FULL OUTER JOIN compare2
