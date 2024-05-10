@@ -1,13 +1,16 @@
-import jinja2
 import os
 import polars
 
+from bq.select import get_unnestcolumns
 from classes.bigquery import Bigquery
 from classes.config import Config
 from classes.util import (
+    COLOR_BLUE,
     COLOR_YELLOW,
+    get_text_used_jinja2template,
     print_with_color,
-    write_df_to_csv
+    write_df_to_csv,
+    write_used_jinja2template,
 )
 
 
@@ -15,35 +18,32 @@ def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
     compare_tables = []
     for tbl in config.tables:
         full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
-        schemafields = bq.get_schemafields(full_tableid)
 
-        columns = []
-        except_columns = []
-        uunest_select_queries = []
-        for schemafield in schemafields:
-            if schemafield.field_type == "RECORD":
-                for f in schemafield.fields:
-                    alias = f"{schemafield.name}_{f.name}"
-                    columns.append({
-                        "name": f.name,
-                        "alias": alias,
-                        "type": f.field_type
-                    })
-                    uunest_select_queries.append(f"{schemafield.name}.{f.name} AS {alias}")
-                except_columns.append(schemafield.name)
-            else:
-                columns.append({
-                    "name": schemafield.name,
-                    "alias": schemafield.name,
-                    "type": schemafield.field_type
-                })
+        print_with_color(f"\n### {full_tableid}", COLOR_BLUE)
 
+        unnestcolumns: list[dict] = get_unnestcolumns(bq.get_schemafields(full_tableid))
+
+        columns: list[dict] = [
+            {
+                "name": col["name"],
+                "alias": f"{"__".join(col["parents"])}__{col["name"]}",
+                "type": col["type"],
+            }
+            for col in unnestcolumns
+        ]
+            
         compare_tables.append({
             "full_tableid": full_tableid,
             "table": tbl['table'],
             "columns": columns,
-            "except_columns": except_columns,
-            "uunest_select_queries": uunest_select_queries
+            "unnest_query": get_text_used_jinja2template(
+                template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
+                render_content={
+                    "full_tableid": full_tableid,
+                    "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
+                    "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+                }
+            )
         })
 
     if len(compare_tables[0]["columns"]) != len(compare_tables[1]["columns"]):
@@ -64,6 +64,10 @@ def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
     join_conditions = []
     where_condition = ""
     for i, row in enumerate(inner_merged_df.rows(named=True)):
+
+        if row["type"] == "RECORD":
+            continue
+
         alias1 = f"compare1.{row['alias']}"
         alias2 = f"compare2.{row['alias']}"
 
@@ -75,19 +79,14 @@ def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
 
         join_conditions.append(f"{conjunction} {Bigquery.get_ifnull_sql(alias1, row['type'])} = {Bigquery.get_ifnull_sql(alias2, row['type'])}")
 
-    # jinja2のテンプレートを読み込む
-    # 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath="./templates/sql", encoding="utf8"))
-    template = env.get_template("compare.sql")
-
-    # 結果を出力
-    with open(os.path.join(result_dir, f"{result_basefilename}.sql"), "w") as f:
-        f.write(template.render({
-            "except_columns": [v["except_columns"] for v in compare_tables],
-            "uunest_select_queries": [v["uunest_select_queries"] for v in compare_tables],
-            "compare_tables": compare_tables,
+    write_used_jinja2template(
+        template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "compare.sql"),
+        write_target_path=os.path.join(result_dir, f"{result_basefilename}.sql"),
+        render_content={
+            "sub_queries": [tbl["unnest_query"] for tbl in compare_tables],
             "join_conditions": join_conditions,
-            "where_condition": where_condition
-        }))
+            "where_condition": where_condition,
+        }
+    )
 
     return

@@ -37,6 +37,15 @@ def is_contain_allwords(text: str, words: list[str]) -> bool: # type: ignore
     return True if re.search(rf"^{''.join(list(map(lambda x: f'(?=.*{x})', words)))}.*$", text) else False
 
 
+# jinja2
+# 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
+
+def get_text_used_jinja2template(template_path: str, render_content) -> str:
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=os.path.dirname(template_path), encoding="utf8"))
+    template = env.get_template(os.path.basename(template_path))
+    return template.render(render_content)
+
+
 # ファイルの書き込み
 
 def write_jsonl_file(path: str, jsons: list[dict]) -> None: # type: ignore
@@ -57,11 +66,7 @@ def write_df_to_csv(path: str, df: polars.DataFrame) -> None:
     df.write_csv(path, separator=",")
 
 
-# jinja2のテンプレートを読み込む
-# 参考: https://qiita.com/simonritchie/items/cc2021ac6860e92de25d
 def write_used_jinja2template(template_path: str, write_target_path: str, render_content) -> None:
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=os.path.dirname(template_path), encoding="utf8"))
-    template = env.get_template(os.path.basename(template_path))
     os.makedirs(os.path.dirname(write_target_path), exist_ok=True)
     with open(write_target_path, "w") as f:
-        f.write(template.render(render_content))
+        f.write(get_text_used_jinja2template(template_path, render_content))
