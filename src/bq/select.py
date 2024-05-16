@@ -6,11 +6,12 @@ from classes.bigquery import Bigquery
 from classes.config import Config
 from classes.util import *
 
-def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
+def bq_select(config: Config, result_dir: str) -> None:
     for tbl in config.tables:
-        full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
+        full_tableid = f"{tbl['project']}.{tbl['dataset']}.{tbl['table']}"
         print_with_color(f"\n### {full_tableid}", COLOR_BLUE)
 
+        bq: Bigquery = Bigquery(tbl['project'])
         result_dir_bytable = os.path.join(result_dir, f"{tbl['dataset']}.{tbl['table']}")
 
         column_names = bq.get_columnslist(full_tableid)
@@ -59,7 +60,7 @@ def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
             writer.writerow(column_names)
 
         # uploadコマンドのサンプル
-        upload_command: str = f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {config.project}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", path)}\n"
+        upload_command: str = f"bq load --source_format=CSV --replace=false --skip_leading_rows 1 {tbl['project']}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", path)}\n"
 
         # jsonl出力
 
@@ -89,7 +90,7 @@ def bq_select(bq: Bigquery, config: Config, result_dir: str) -> None:
 
         for result_json in result_jsons:
             write_jsonl_file(result_json["path"], result_json["json"])
-            upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {config.project}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", get_escapedtext_forcommand(result_json["path"]))}\n"
+            upload_command += f"bq load --source_format=NEWLINE_DELIMITED_JSON --replace=false {tbl['project']}:{tbl['dataset']}.{tbl['table']} {os.path.join("src", get_escapedtext_forcommand(result_json["path"]))}\n"
 
         write_text_file(os.path.join(result_dir_bytable, "upload.sh"), upload_command)
 

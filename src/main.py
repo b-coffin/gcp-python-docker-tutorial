@@ -28,13 +28,12 @@ def main():
     result_dir = os.path.join("result", datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + "_" + config.service)
 
     if config.service == Config.SERVICES["BIGQUERY"]:
-        bq = Bigquery(config.project)
 
         if config.mode == "compare":
-            bq_compare(bq, config, result_dir)
+            bq_compare(config, result_dir)
 
         elif config.mode == "select":
-            bq_select(bq, config, result_dir)
+            bq_select(config, result_dir)
 
     return
 

@@ -14,12 +14,14 @@ from classes.util import (
 )
 
 
-def bq_compare(bq: Bigquery, config: Config, result_dir: str) -> None:
+def bq_compare(config: Config, result_dir: str) -> None:
     compare_tables = []
     for tbl in config.tables:
-        full_tableid = f"{config.project}.{tbl['dataset']}.{tbl['table']}"
+        full_tableid = f"{tbl['project']}.{tbl['dataset']}.{tbl['table']}"
 
         print_with_color(f"\n### {full_tableid}", COLOR_BLUE)
+
+        bq: Bigquery = Bigquery(tbl['project'])
 
         unnestcolumns: list[dict] = get_unnestcolumns(bq.get_schemafields(full_tableid))
 

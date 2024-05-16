@@ -11,7 +11,6 @@ class Config:
     }
 
     def __init__(self, config_json):
-        self.project = jmespath.search("project", config_json)
         self.service = jmespath.search("service", config_json)
         self.mode = jmespath.search("mode", config_json)
         if self.service == self.SERVICES["BIGQUERY"]:
