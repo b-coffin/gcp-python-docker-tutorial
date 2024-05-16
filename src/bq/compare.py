@@ -55,13 +55,13 @@ def bq_compare(config: Config, result_dir: str) -> None:
     right = polars.DataFrame(compare_tables[1]["columns"])
 
     # 比較表作成
-    outer_merged_df = left.join(right, on=["name", "alias", "type"], how="outer")
+    outer_merged_df = left.join(right, on=["name"], how="outer")
     result_basefilename = f"{'__and__'.join([tbl['table'] for tbl in compare_tables])}"
     write_df_to_csv(os.path.join(result_dir, f"compare-{result_basefilename}.csv"), outer_merged_df)
 
     # 値を比較するsql作成
 
-    inner_merged_df = left.join(right, on=["name", "alias", "type"], how="inner")
+    inner_merged_df = left.join(right, on=["name"], how="inner")
 
     join_conditions = []
     where_condition = ""
