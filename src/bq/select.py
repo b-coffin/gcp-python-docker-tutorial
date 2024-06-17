@@ -23,35 +23,13 @@ def bq_select(config: Config, result_dir: str) -> None:
         schemafields = bq.get_schemafields(full_tableid)
 
         # カラム情報出力
-
         write_df_to_csv(
             path=os.path.join(result_dir_bytable, "columns.csv"),
             df=polars.DataFrame([{"column": sf.name} for sf in schemafields])
         )
 
         # sql出力
-
-        unnestcolumns = get_unnestcolumns(schemafields)
-
-        write_used_jinja2template(
-            template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
-            write_target_path=os.path.join(result_dir_bytable, "select_unnest.sql"),
-            render_content={
-                "full_tableid": full_tableid,
-                "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
-                "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
-            }
-        )
-
-        write_used_jinja2template(
-            template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
-            write_target_path=os.path.join(result_dir_bytable, "select_unnest_safecast_numeric.sql"),
-            render_content={
-                "full_tableid": full_tableid,
-                "columns": [{"name": f"SAFE_CAST({"__".join(col["parents"])}.{col["name"]} AS NUMERIC)", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
-                "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
-            }
-        )
+        write_sql(schemafields, result_dir_bytable, full_tableid)
 
         # csv出力
         path: str = os.path.join(result_dir_bytable, "template.csv")
@@ -111,3 +89,18 @@ def get_unnestcolumns(schemafields: list, parents: list[str] = ["main"]) -> list
         if schemafield.field_type == "RECORD":
             cols.extend(get_unnestcolumns(schemafield.fields, parents + [schemafield.name]))
     return cols
+
+
+def write_sql(schemafields, result_dir: str, full_tableid: str) -> None:
+    unnestcolumns = get_unnestcolumns(schemafields)
+
+    # RECORD型のカラムを展開したSQL
+    write_used_jinja2template(
+        template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
+        write_target_path=os.path.join(result_dir, "select_unnest.sql"),
+        render_content={
+            "full_tableid": full_tableid,
+            "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
+            "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+        }
+    )
