@@ -4,6 +4,10 @@
 get-gcloud-auth-json:
 	gcloud auth application-default login --disable-quota-project
 
+# 上記で取得したクレデンシャルファイルの中身を表示
+cat-adc:
+	cat ~/.config/gcloud/application_default_credentials.json
+
 # Docker
 
 docker-up:
