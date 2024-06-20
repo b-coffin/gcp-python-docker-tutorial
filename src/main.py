@@ -27,7 +27,7 @@ def main():
     # 結果を格納するフォルダ
     result_dir = os.path.join("result", datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + "_" + config.service)
 
-    if config.service == Config.SERVICES["BIGQUERY"]:
+    if config.service == Config.SERVICE_BQ:
 
         if config.mode == "compare":
             bq_compare(config, result_dir)
