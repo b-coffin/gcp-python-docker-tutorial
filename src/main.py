@@ -4,12 +4,12 @@ import os
 import traceback
 from zoneinfo import ZoneInfo
 
-from classes.bigquery import Bigquery
 from classes.config import Config
 from classes.util import *
 
 from bq.compare import bq_compare
 from bq.select import bq_select
+from storage.upload import storage_upload
 
 def main():
 
@@ -34,6 +34,11 @@ def main():
 
         elif config.mode == "select":
             bq_select(config, result_dir)
+
+    elif config.service == Config.SERVICE_STORAGE:
+            
+        if config.mode == "upload":
+            storage_upload(config)
 
     return
 

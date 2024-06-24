@@ -1,0 +1,9 @@
+{
+    "service": "storage",
+    "mode": "upload",
+    "project": "project01",
+    "bucket": "bucket01",
+    "source_folder": "source_sample",
+    "destination_folder": "destination"
+  }
+  

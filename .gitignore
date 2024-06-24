@@ -4,4 +4,6 @@ src/config/*
 !src/config/sample_*.json
 
 src/input/*
+!src/input/source_sample
+
 src/result/*

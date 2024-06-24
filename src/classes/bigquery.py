@@ -3,7 +3,7 @@ from google.cloud import bigquery
 class Bigquery:
 
     def __init__(self, project):
-        self.client = bigquery.Client(project = project)
+        self.client = bigquery.Client(project=project)
 
 
     def get_schemafields(self, full_tableid):
