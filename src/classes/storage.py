@@ -1,9 +1,14 @@
 from google.cloud import storage
 
+from classes.config import Config
+
 class Storage:
 
-    def __init__(self, project: str) -> None:
-        self.client = storage.Client(project=project)
+    def __init__(self, config: Config) -> None:
+        if config.key_file:
+            self.client = storage.Client.from_service_account_json(config.key_file)
+        else:
+            self.client = storage.Client(project=config.project)
 
     # バケット名、アップロード元のファイル名、アップロード先のファイル名を指定してアップロードを行う
     def upload_blob(self, bucket_name: str, source_file_name: str, destination_blob_name: str) -> None:

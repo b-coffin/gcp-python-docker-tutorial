@@ -12,6 +12,7 @@ class Config:
     def __init__(self, config_json):
         self.service = jmespath.search("service", config_json)
         self.mode = jmespath.search("mode", config_json)
+        self.key_file = jmespath.search("key_file", config_json)
         if self.service == self.SERVICE_BQ:
             self.tables = jmespath.search("bigquery.tables", config_json)
         if self.service == self.SERVICE_STORAGE:

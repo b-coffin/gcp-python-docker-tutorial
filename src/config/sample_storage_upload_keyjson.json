@@ -1,0 +1,10 @@
+{
+    "service": "storage",
+    "mode": "upload",
+    "project": "project01",
+    "bucket": "bucket01",
+    "source_folder": "source_sample",
+    "destination_folder": "destination",
+    "key_file": "input/sa_key_sample.json"
+  }
+  

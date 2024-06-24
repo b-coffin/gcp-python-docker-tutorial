@@ -16,7 +16,7 @@ def storage_upload(config: Config) -> None:
     ----------
     None
     """
-    storage: Storage = Storage(config.project)
+    storage: Storage = Storage(config)
 
     for path in [p for p in pathlib.Path().glob(f"input/{config.source_folder}/**/*") if p.is_file()]:
         storage.upload_blob(config.bucket, path, os.path.join(config.destination_folder, os.path.basename(path)))
