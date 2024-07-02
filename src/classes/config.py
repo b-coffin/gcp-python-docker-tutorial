@@ -89,10 +89,6 @@ class Config:
     
     @source_folder.setter
     def source_folder(self, value):
-        if self.service == self.SERVICE_STORAGE:
-            if self.mode == self.MODE_UPLOAD:
-                if value is None:
-                    raise ValueError(f"\"source_folder\"は必須です")
         self.__source_folder = value
 
 
