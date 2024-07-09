@@ -1,8 +1,10 @@
+import datetime
 import pandas
 
 from google.cloud import storage
 
 from classes.config import Config
+from classes.util import *
 
 class Storage:
 
@@ -13,7 +15,6 @@ class Storage:
             self.client = storage.Client(project=config.project)
 
 
-    # バケット名、アップロード元のファイル名、アップロード先のファイル名を指定してアップロードを行う
     def upload_blob(self, bucket_name: str, source_file_name: str, destination_blob_name: str) -> None:
         """
         指定したGoogle Cloud Storageバケットにファイルをアップロードします。
@@ -42,7 +43,6 @@ class Storage:
         print(f"ファイル {source_file_name} を {destination_blob_name} にアップロードしました。")
 
 
-    # バケット名、データフレーム、アップロード先のファイル名を指定してアップロードを行う
     def upload_df(self, bucket_name: str, df: pandas.DataFrame, destination_blob_name: str) -> None:
         """
         指定した Google Cloud Storage バケットにデータフレームをアップロードします。
@@ -69,3 +69,38 @@ class Storage:
         blob.upload_from_string(df.to_csv(index=False), content_type='text/csv')
 
         print(f"データフレームを {destination_blob_name} にアップロードしました。")
+
+
+    def generate_upload_signed_url_v4(self, bucket_name: str, blob_name: str, content_type: str = "application/octet-stream") -> str:
+        """
+        指定したバケットとblobに対して署名付きURLを生成します。
+
+        Parameters
+        ----------
+        bucket_name (str): アップロード先のバケット名。
+        blob_name (str): バケット内でのblob名。
+        content_type (str): アップロードするファイルのContent-Type。
+
+        Returns
+        ----------
+        url (str): 署名付きURL。
+        
+        Example
+        ----------
+        >>> storage = Storage()
+        >>> url = storage.generate_upload_signed_url_v4('my-bucket', 'my-file')
+        署名付きURLを発行しました。
+        """
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        url = blob.generate_signed_url(
+            version='v4',
+            expiration=datetime.timedelta(days=7),
+            method='PUT',
+            content_type=content_type,
+        )
+
+        print_with_color(f"署名付きURLを発行しました。", COLOR_GREEN)
+
+        return url
+    

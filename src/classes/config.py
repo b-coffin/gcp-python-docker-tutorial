@@ -8,6 +8,7 @@ class Config:
     MODE_SELECT = "select"
     MODE_COMPARE = "compare"
     MODE_UPLOAD = "upload"
+    MODE_GET = "get"
 
     def __init__(self, config_json):
         self.service = jmespath.search("service", config_json)
@@ -18,6 +19,7 @@ class Config:
         if self.service == self.SERVICE_STORAGE:
             self.project = jmespath.search("project", config_json)
             self.bucket = jmespath.search("bucket", config_json)
+            self.blob_name = jmespath.search("blob_name", config_json)
             self.source_folder = jmespath.search("source_folder", config_json)
             self.destination_folder = jmespath.search("destination_folder", config_json)
 
@@ -48,6 +50,7 @@ class Config:
             self.MODE_COMPARE
         ]
         storage_mode_list = [
+            self.MODE_GET,
             self.MODE_UPLOAD
         ]
         if self.service == self.SERVICE_BQ:

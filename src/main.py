@@ -9,6 +9,7 @@ from classes.util import *
 
 from bq.compare import bq_compare
 from bq.select import bq_select
+from storage.get import storage_get
 from storage.upload import storage_upload
 
 def main():
@@ -31,13 +32,14 @@ def main():
 
         if config.mode == "compare":
             bq_compare(config, result_dir)
-
         elif config.mode == "select":
             bq_select(config, result_dir)
 
     elif config.service == Config.SERVICE_STORAGE:
             
-        if config.mode == "upload":
+        if config.mode == "get":
+            storage_get(config, result_dir)
+        elif config.mode == "upload":
             storage_upload(config)
 
     return

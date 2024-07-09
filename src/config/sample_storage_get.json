@@ -1,0 +1,9 @@
+{
+    "service": "storage",
+    "mode": "get",
+    "project": "project01",
+    "bucket": "bucket01",
+    "blob_name": "path/to/blob",
+    "key_file": "input/sa_key_sample.json"
+  }
+  
