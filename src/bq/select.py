@@ -72,7 +72,7 @@ def bq_select(config: Config, result_dir: str) -> None:
 
         write_text_file(os.path.join(result_dir_bytable, "upload.sh"), upload_command)
 
-        print_with_color("...Done", COLOR_GREEN)
+        print_with_color(f"{full_tableid} 完了", COLOR_GREEN)
 
     return
 
