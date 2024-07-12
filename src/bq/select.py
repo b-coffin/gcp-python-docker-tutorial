@@ -78,16 +78,19 @@ def bq_select(config: Config, result_dir: str) -> None:
 
 
 # 再帰関数
-def get_unnestcolumns(schemafields: list, parents: list[str] = ["main"]) -> list[dict]: # type: ignore
+def get_unnestcolumns(schemafields: list, parent: str = "main.") -> list[dict]: # type: ignore
     cols = []
     for schemafield in schemafields:
+        full_name: str = f"{parent}{schemafield.name}"
         cols.append({
-            "parents": parents,
+            "parent": parent,
             "name": schemafield.name,
-            "type": schemafield.field_type
+            "full_name": full_name,
+            "type": schemafield.field_type,
+            "mode": schemafield.mode
         })
         if schemafield.field_type == "RECORD":
-            cols.extend(get_unnestcolumns(schemafield.fields, parents + [schemafield.name]))
+            cols.extend(get_unnestcolumns(schemafield.fields, f"{full_name.replace(".", "__") if schemafield.mode == "REPEATED" else full_name}."))
     return cols
 
 
@@ -100,7 +103,7 @@ def write_sql(schemafields, result_dir: str, full_tableid: str) -> None:
         write_target_path=os.path.join(result_dir, "select_unnest.sql"),
         render_content={
             "full_tableid": full_tableid,
-            "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
-            "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+            "columns": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["type"] != "RECORD"],
+            "joins": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["mode"] == "REPEATED"]
         }
     )
