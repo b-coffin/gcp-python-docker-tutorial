@@ -1,14 +1,15 @@
 {
-  "project": "project01",
   "service": "bigquery",
   "mode": "compare",
   "bigquery": {
     "tables": [
       {
+        "project": "project01",
         "dataset": "dataset01",
         "table": "table01"
       },
       {
+        "project": "project02",
         "dataset": "dataset02",
         "table": "table02"
       }

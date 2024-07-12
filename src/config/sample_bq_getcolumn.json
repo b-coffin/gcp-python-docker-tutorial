@@ -1,9 +1,13 @@
 {
-  "project": "project01",
   "service": "bigquery",
   "mode": "select",
   "bigquery": {
-    "dataset": "dataset01",
-    "table": "table01"
+    "tables": [
+      {
+        "project": "project01",
+        "dataset": "dataset01",
+        "table": "table01"
+      }
+    ]
   }
 }
