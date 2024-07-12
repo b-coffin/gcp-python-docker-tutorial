@@ -2,7 +2,6 @@
   "project": "project01",
   "service": "bigquery",
   "mode": "select",
-  "output_format": "sql",
   "bigquery": {
     "dataset": "dataset01",
     "table": "table01"
