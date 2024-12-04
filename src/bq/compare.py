@@ -28,7 +28,7 @@ def bq_compare(config: Config, result_dir: str) -> None:
         columns: list[dict] = [
             {
                 "name": col["name"],
-                "alias": f"{"__".join(col["parents"])}__{col["name"]}",
+                "alias": col["full_name"].replace(".", "__"),
                 "type": col["type"],
             }
             for col in unnestcolumns
@@ -42,8 +42,8 @@ def bq_compare(config: Config, result_dir: str) -> None:
                 template_path=os.path.join(os.path.dirname(__file__), "templates", "sql", "select_unnest.sql"),
                 render_content={
                     "full_tableid": full_tableid,
-                    "columns": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] != "RECORD"],
-                    "joins": [{"name": f"{"__".join(col["parents"])}.{col["name"]}", "alias": f"{"__".join(col["parents"])}__{col["name"]}"} for col in unnestcolumns if col["type"] == "RECORD"]
+                    "columns": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["type"] != "RECORD"],
+                    "joins": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["type"] == "RECORD"]
                 }
             )
         })
