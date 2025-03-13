@@ -43,7 +43,7 @@ def bq_compare(config: Config, result_dir: str) -> None:
                 render_content={
                     "full_tableid": full_tableid,
                     "columns": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["type"] != "RECORD"],
-                    "joins": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["type"] == "RECORD"]
+                    "joins": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["mode"] == "REPEATED"]
                 }
             )
         })
