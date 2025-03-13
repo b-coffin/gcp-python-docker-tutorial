@@ -52,6 +52,8 @@ class Bigquery:
             return 0
         elif field_type in ["DATE"]:
             return "9999-12-31"
+        elif field_type in ["TIMESTAMP"]:
+            return "9999-12-31 23:59:59"
         elif field_type in ["BOOLEAN"]:
             return "TRUE"
         else:
@@ -65,6 +67,8 @@ class Bigquery:
             return f"IFNULL({fieldname}, 0)"
         elif fieldtype in ["DATE"]:
             return f"IFNULL({fieldname}, '9999-12-31')"
+        elif fieldtype in ["TIMESTAMP"]:
+            return f"IFNULL({fieldname}, '9999-12-31 23:59:59')"
         elif fieldtype in ["BOOLEAN"]:
             return f"IFNULL({fieldname}, TRUE)"
         else:
