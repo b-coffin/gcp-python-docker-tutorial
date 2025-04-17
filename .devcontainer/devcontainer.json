@@ -6,7 +6,9 @@
   "shutdownAction": "stopCompose",
   "customizations": {
     "vscode": {
-      "settings": {},
+      "settings": {
+        "http.proxyStrictSSL": false
+      },
       "extensions": ["ms-python.python", "ms-python.vscode-pylance"]
     }
   }
