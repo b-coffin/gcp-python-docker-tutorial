@@ -1,6 +1,7 @@
 import csv
 import os
 import pathlib
+from textwrap import dedent
 
 from classes.bigquery import Bigquery
 from classes.config import Config
@@ -26,6 +27,12 @@ def bq_select(config: Config, result_dir: str) -> None:
         write_df_to_csv(
             path=os.path.join(result_dir_bytable, "columns.csv"),
             df=polars.DataFrame([{"column": sf.name} for sf in schemafields])
+        )
+
+        # テーブル定義書用にカラム情報出力
+        write_df_to_csv(
+            path=os.path.join(result_dir_bytable, "for_table_definition.csv"),
+            df=polars.DataFrame(get_columns_for_table_definition_csv(bq, full_tableid, schemafields))
         )
 
         # sql出力
@@ -107,3 +114,77 @@ def write_sql(schemafields, result_dir: str, full_tableid: str) -> None:
             "joins": [{"name": col["full_name"], "alias": col["full_name"].replace(".", "__")} for col in unnestcolumns if col["mode"] == "REPEATED"]
         }
     )
+
+
+def get_columns_for_table_definition_csv(bq: Bigquery, full_tableid: str, schemafields: list) -> list[dict]:
+    """
+    スキーマフィールドからテーブル定義用のカラム情報を取得する
+    """
+
+    def get_example_value(full_fieldname: str, fieldname: str, field_type: str, repeated_columns: list) -> str:
+        """
+        BigQueryから指定したカラムの例示値を取得する
+        """
+        # repeated_columnsに基づいてUNNEST句を動的に生成
+        unnest_clauses = " ".join([f"\n, UNNEST({col['full_name']}) AS {col['name']}" for col in repeated_columns])
+    
+        # UNNEST句を含むクエリを構築
+        query = f"""
+        SELECT {full_fieldname}
+        FROM `{full_tableid}`{unnest_clauses}
+        WHERE {full_fieldname} IS NOT NULL
+        LIMIT 1
+        """
+        
+        query_job = bq.client.query(query)
+        result = query_job.result()
+        
+        for row in result:
+            if row[fieldname] is not None:
+                return dedent(query), str(row[fieldname])
+            else:
+                break
+        
+        # 例示値が取得できなかった場合はNULLを返す
+        return dedent(query), None
+
+    def expand_nested_columns(schemafields: list, parent_name: str = "", indent_level: int = 0, repeated_columns: list = []) -> list[dict]:  # type: ignore
+        """
+        スキーマフィールドを再帰的に展開し、ネストされたカラム情報を取得する
+        """
+        cols = []
+        for schemafield in schemafields:
+            # インデントをスペースで表現
+            indent = "    " * indent_level
+            # 親カラム名がある場合はドットで連結
+            full_name = f"{parent_name}.{schemafield.name}" if parent_name else schemafield.name
+            # 例示値を取得
+            example_value_query, example_value = get_example_value(
+                full_name,
+                schemafield.name,
+                schemafield.field_type,
+                repeated_columns
+            )
+            cols.append({
+                "name": schemafield.name,
+                "display_name": f"{indent}{schemafield.name}",  # インデントを追加
+                "type": schemafield.field_type,
+                "mode": schemafield.mode,
+                "example_value": example_value,
+                "example_value_query": example_value_query,
+            })
+            if schemafield.field_type == "RECORD":
+                # RECORD型の場合、インデントレベルを1つ増やして再帰
+                nested_columns = expand_nested_columns(
+                    schemafield.fields,
+                    schemafield.name if schemafield.mode == "REPEATED" else full_name,  # 親カラム名を渡す
+                    indent_level + 1,
+                    repeated_columns + [{
+                        "full_name": full_name,
+                        "name": schemafield.name
+                    }] if schemafield.mode == "REPEATED" else repeated_columns  # REPEATEDの場合はUNNEST句を追加
+                )
+                cols.extend(nested_columns)
+        return cols
+
+    return expand_nested_columns(schemafields)
