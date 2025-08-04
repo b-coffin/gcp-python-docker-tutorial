@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import shutil
 import traceback
 from zoneinfo import ZoneInfo
 
@@ -27,6 +28,10 @@ def main():
 
     # 結果を格納するフォルダ
     result_dir = os.path.join("result", datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + "_" + config.service)
+
+    # configファイルをresult_dirに複製
+    os.makedirs(result_dir, exist_ok=True)  # 結果フォルダを作成
+    shutil.copy(config_filepath, os.path.join(result_dir, os.path.basename(config_filepath)))
 
     if config.service == Config.SERVICE_BQ:
 
