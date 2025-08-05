@@ -167,6 +167,7 @@ def get_columns_for_table_definition_csv(bq: Bigquery, full_tableid: str, schema
             )
             cols.append({
                 "name": schemafield.name,
+                "full_name": full_name,
                 "display_name": f"{indent}{schemafield.name}",  # インデントを追加
                 "type": schemafield.field_type,
                 "mode": schemafield.mode,
