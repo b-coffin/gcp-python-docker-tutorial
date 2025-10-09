@@ -121,12 +121,10 @@ def get_columns_for_table_definition_csv(bq: Bigquery, full_tableid: str, schema
     スキーマフィールドからテーブル定義用のカラム情報を取得する
     """
 
-    def get_example_value(full_fieldname: str, fieldname: str, field_type: str, repeated_columns: list) -> str:
+    def get_example_value(full_fieldname: str, fieldname: str, field_type: str, unnest_clauses: str) -> str:
         """
         BigQueryから指定したカラムの例示値を取得する
         """
-        # repeated_columnsに基づいてUNNEST句を動的に生成
-        unnest_clauses = " ".join([f"\n, UNNEST({col['full_name']}) AS {col['name']}" for col in repeated_columns])
     
         # UNNEST句を含むクエリを構築
         query = f"""
@@ -158,13 +156,37 @@ def get_columns_for_table_definition_csv(bq: Bigquery, full_tableid: str, schema
             indent = "    " * indent_level
             # 親カラム名がある場合はドットで連結
             full_name = f"{parent_name}.{schemafield.name}" if parent_name else schemafield.name
+
+            # repeated_columnsに基づいてUNNEST句を動的に生成
+            unnest_clauses = " ".join([f"\n, UNNEST({col['full_name']}) AS {col['name']}" for col in repeated_columns])
+
             # 例示値を取得
             example_value_query, example_value = get_example_value(
                 full_name,
                 schemafield.name,
                 schemafield.field_type,
-                repeated_columns
+                unnest_clauses
             )
+
+            # 例示値が '{' で始まる場合はjson形式、'[' で始まる場合は配列形式と判定する
+            json_type = None
+            if example_value is not None:
+                if example_value.startswith('{'):
+                    json_type = "json"
+                elif example_value.startswith('['):
+                    json_type = "array"
+
+            # 例示値がjson形式もしくは配列形式の場合、キーを取得するSQLを生成する
+            get_json_keys_sql = None
+            if json_type in ["json", "array"]:
+                get_json_keys_sql = f"""
+                SELECT
+                DISTINCT v AS keys
+                FROM `{full_tableid}`{unnest_clauses}`
+                , UNNEST(JSON_KEYS({full_name}), mode => "lax")) AS v
+                ORDER BY v
+                """
+
             cols.append({
                 "name": schemafield.name,
                 "full_name": full_name,
@@ -173,6 +195,8 @@ def get_columns_for_table_definition_csv(bq: Bigquery, full_tableid: str, schema
                 "mode": schemafield.mode,
                 "example_value": example_value,
                 "example_value_query": example_value_query,
+                "json_type": json_type,
+                "get_json_keys_query": get_json_keys_sql
             })
             if schemafield.field_type == "RECORD":
                 # RECORD型の場合、インデントレベルを1つ増やして再帰
