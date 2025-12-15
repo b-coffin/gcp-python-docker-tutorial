@@ -4,6 +4,7 @@ class Config:
 
     SERVICE_BQ = "bigquery"
     SERVICE_STORAGE = "storage"
+    SERVICE_SCHEDULED_QUERY = "scheduled_query"
 
     MODE_SELECT = "select"
     MODE_COMPARE = "compare"
@@ -22,6 +23,9 @@ class Config:
             self.blob_name = jmespath.search("blob_name", config_json)
             self.source_folder = jmespath.search("source_folder", config_json)
             self.destination_folder = jmespath.search("destination_folder", config_json)
+        if self.service == self.SERVICE_SCHEDULED_QUERY:
+            self.projects = jmespath.search("projects", config_json)
+            self.locations = jmespath.search("locations", config_json)
 
 
     @property
@@ -32,7 +36,8 @@ class Config:
     def service(self, value):
         service_list = [
             self.SERVICE_BQ,
-            self.SERVICE_STORAGE
+            self.SERVICE_STORAGE,
+            self.SERVICE_SCHEDULED_QUERY,
         ]
         if value not in service_list:
             raise ValueError(f"\"service\"は次のいずれかでなければなりません: {', '.join(service_list)}")
@@ -53,12 +58,18 @@ class Config:
             self.MODE_GET,
             self.MODE_UPLOAD
         ]
+        scheduled_query_mode_list = [
+            self.MODE_GET,
+        ]
         if self.service == self.SERVICE_BQ:
             if value not in bq_mode_list:
                 raise ValueError(f"\"mode\"は次のいずれかでなければなりません: {', '.join(bq_mode_list)}")
         elif self.service == self.SERVICE_STORAGE:
             if value not in storage_mode_list:
                 raise ValueError(f"\"mode\"は次のいずれかでなければなりません: {', '.join(storage_mode_list)}")
+        elif self.service == self.SERVICE_SCHEDULED_QUERY:
+            if value not in scheduled_query_mode_list:
+                raise ValueError(f"\"mode\"は次のいずれかでなければなりません: {', '.join(scheduled_query_mode_list)}")
         self.__mode = value
 
 
@@ -106,3 +117,43 @@ class Config:
                 if value is None:
                     raise ValueError(f"\"destination_folder\"は必須です")
         self.__destination_folder = value
+
+
+    @property
+    def projects(self):
+        return self.__projects
+
+    @projects.setter
+    def projects(self, value):
+        if value is None:
+            value = []
+        elif isinstance(value, str):
+            value = [value]
+        elif not isinstance(value, list):
+            raise ValueError("\"projects\" は文字列または配列で指定してください")
+
+        if self.service == self.SERVICE_SCHEDULED_QUERY:
+            if len(value) == 0:
+                raise ValueError("\"projects\"は1件以上指定してください")
+
+        self.__projects = value
+
+
+    @property
+    def locations(self):
+        return self.__locations
+
+    @locations.setter
+    def locations(self, value):
+        default_locations = ["us", "asia-northeast1"]
+        if value is None:
+            value = default_locations.copy()
+        elif isinstance(value, str):
+            value = [value]
+        elif not isinstance(value, list):
+            raise ValueError("\"locations\" は文字列または配列で指定してください")
+
+        if len(value) == 0:
+            value = default_locations.copy()
+
+        self.__locations = value

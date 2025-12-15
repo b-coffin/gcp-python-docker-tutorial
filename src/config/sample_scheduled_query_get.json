@@ -1,0 +1,11 @@
+{
+  "service": "scheduled_query",
+  "mode": "get",
+  "projects": [
+    "my-gcp-project"
+  ],
+  "locations": [
+    "us",
+    "asia-northeast1"
+  ]
+}
