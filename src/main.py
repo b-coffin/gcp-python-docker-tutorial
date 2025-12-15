@@ -10,6 +10,7 @@ from classes.util import *
 
 from bq.compare import bq_compare
 from bq.select import bq_select
+from scheduled_query.get import scheduled_query_get
 from storage.get import storage_get
 from storage.upload import storage_upload
 
@@ -46,6 +47,11 @@ def main():
             storage_get(config, result_dir)
         elif config.mode == "upload":
             storage_upload(config)
+
+    elif config.service == Config.SERVICE_SCHEDULED_QUERY:
+
+        if config.mode == Config.MODE_GET:
+            scheduled_query_get(config, result_dir)
 
     return
 
